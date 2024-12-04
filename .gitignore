@@ -1,0 +1,9 @@
+# Python Enviroment
+venv/
+
+# Dataset
+data/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+nohup.out
