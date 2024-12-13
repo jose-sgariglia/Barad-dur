@@ -1,0 +1,10 @@
+[
+    "duration",
+    "payload_bytes_std",
+    "bwd_payload_bytes_variance",
+    "min_header_bytes",
+    "psh_flag_counts",
+    "rst_flag_counts",
+    "bwd_fin_flag_counts",
+    "bwd_psh_flag_counts"
+]
