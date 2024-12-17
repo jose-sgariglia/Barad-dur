@@ -191,10 +191,8 @@ def payload2packet(event):
 
     return (hdr, packet)
 
-
-
 # -------------------------------------------------------------------------------------------------
-# The code below is not the original code from the snippet
+# The code below is not the original code from Jason Ish
 # I have to modify the code to make it work with my script
 #
 # By Suga
@@ -203,61 +201,75 @@ def payload2packet(event):
 class PcapConversionError(Exception):
     pass
 
+class PcapConverter:
+    def __init__(self, output_filename: str, dlt: str = None, payload: bool = False):
+        """
+        Inizializza il convertitore PCAP.
 
-def run(output_filename: str, eves: List[dict], dlt: str = None, payload: bool = False) -> int:
-    """
-    Converts eve.json events into a pcap file.
+        :param output_filename: Nome del file di output.
+        :param dlt: Tipo di DLT (e.g., "RAW", "EN10MB").
+        :param payload: Se True, converte i payload invece dei pacchetti.
+        """
+        if not has_libpcap:
+            raise PcapConversionError("Failed to load libpcap.")
 
-    :param output_filename: Name of the output file.
-    :param eves: List of JSON events (dict objects).
-    :param dlt: DLT type (e.g., "RAW", "EN10MB").
-    :param payload: If True, converts payloads instead of packets.
-    :return: Number of converted events.
-    """
-    if not has_libpcap:
-        raise PcapConversionError("Failed to load libpcap.")
+        if payload and not has_scapy:
+            raise PcapConversionError("Scapy is required for payload conversion.")
 
-    if payload and not has_scapy:
-        raise PcapConversionError("Scapy is required for payload conversion.")
+        self.output_filename = output_filename
+        self.payload = payload
+        self.dlt_value = self._determine_dlt(dlt, payload)
 
-    # Determine the DLT type
-    dlt_value = None
-    if dlt:
-        if dlt.upper() in DLT:
-            dlt_value = DLT[dlt.upper()]
+        if output_filename == "-" and os.isatty(sys.stdout.fileno()):
+            raise PcapConversionError("Cowardly refusing to write output to terminal.")
+
+        try:
+            self.pcap = Pcap.open_dead(self.dlt_value, 65535)
+            self.dumper = self.pcap.dump_open(output_filename)
+        except Exception as e:
+            raise PcapConversionError(f"Failed to initialize PCAP writer: {str(e)}")
+
+    def _determine_dlt(self, dlt: str, payload: bool) -> int:
+        """
+        Determina il tipo di DLT.
+
+        :param dlt: Tipo di DLT specificato dall'utente.
+        :param payload: Se True, usa DLT_RAW di default.
+        :return: Valore del DLT corrispondente.
+        """
+        if dlt:
+            if dlt.upper() in DLT:
+                return DLT[dlt.upper()]
+            else:
+                raise PcapConversionError(f"Unknown DLT type: {dlt}")
+        elif payload:
+            return DLT_RAW
         else:
-            raise PcapConversionError(f"Unknown DLT type: {dlt}")
-    elif payload:
-        dlt_value = DLT_RAW
-    else:
-        dlt_value = DLT_EN10MB
+            return DLT_EN10MB
 
+    def run(self, eves: List[dict]) -> int:
+        """
+        Converte gli eventi eve.json in un file pcap.
 
-    if output_filename == "-" and os.isatty(sys.stdout.fileno()):
-        raise PcapConversionError("Cowardly refusing to write output to terminal.")
+        :param eves: Lista di eventi JSON (oggetti dict).
+        :return: Numero di eventi convertiti.
+        """
+        count = 0
+        try:
+            for event in eves:
+                hdr, packet = None, None
+                if self.payload:
+                    hdr, packet = payload2packet(event)
+                elif "packet" in event:
+                    hdr, packet = eve2pcap(event)
 
-    # Initialize the PCAP writer
-    try:
-        pcap = Pcap.open_dead(dlt_value, 65535)
-        dumper = pcap.dump_open(output_filename)
-    except Exception as e:
-        raise PcapConversionError(f"Failed to initialize PCAP writer: {str(e)}")
+                if hdr and packet:
+                    self.dumper.dump(hdr, ctypes.c_char_p(packet))
+                    count += 1
+        except Exception as e:
+            raise PcapConversionError(f"Error during conversion: {str(e)}")
+        finally:
+            self.dumper.close()
 
-    count = 0
-    try:
-        for event in eves:
-            hdr, packet = None, None
-            if payload:
-                hdr, packet = payload2packet(event)
-            elif "packet" in event:
-                hdr, packet = eve2pcap(event)
-            if hdr and packet:
-                dumper.dump(hdr, ctypes.c_char_p(packet))
-                count += 1
-    except Exception as e:
-        raise PcapConversionError(f"Error during conversion: {str(e)}")
-    finally:
-        dumper.close()
-
-    print(f"{count} eve records converted to pcap.", file=sys.stderr)
-    return count
+        print(f"{count} eve records converted to pcap.", file=sys.stderr)
+        return count
