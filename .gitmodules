@@ -1,0 +1,3 @@
+[submodule "libs/NTLFlowLyzer"]
+	path = libs/NTLFlowLyzer
+	url = https://github.com/ahlashkari/NTLFlowLyzer.git
