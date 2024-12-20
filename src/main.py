@@ -1,67 +1,69 @@
 import os
-import json 
-import redis
-import logging
-import pandas as pd
-from hashlib import sha1
+from utils.handler_redis import RedisPacketHandler, Observer, PacketContext
+from utils.eve2pcap import PcapConverter
+from utils.pcap2csv import CsvConverter
+from utils.handler_model import ModelHandler
 
-# Custom package
-from utils import pcap2csv
-from utils.eve2pcap import eve2pcap
-from utils.model import Model
-
-logging.basicConfig(level=logging.WARNING)
-
-PATH_ALERTS = "../alerts/"
-os.makedirs(PATH_ALERTS, exist_ok=True)
-
-PATH_CSV = "../csv/"
-os.makedirs(PATH_CSV, exist_ok=True)
+TEMP_DIR = ".temp/"
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 
-r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
+class PcapConverterObserver(Observer):
+    def __init__(self, output_filename, dlt=None, payload=False):
+        self.pcap_converter = PcapConverter(output_filename, dlt, payload)
 
-pubsub = r.pubsub()
-pubsub.subscribe('suricata:alert')
+    def update(self, context: PacketContext):
+        self.pcap_converter.run(context.packets)
 
-model_name = "RandomForestClassifier.joblib"
+
+class CsvConverterObserver(Observer):
+    def __init__(self, config_ntl):
+        self.csv_converter = CsvConverter(config_ntl)
+
+    def update(self, context: PacketContext):
+        self.csv_converter.run()
+
+
+class ModelHandlerObserver(Observer):
+    def __init__(self, path: str):
+        self.model_handler = ModelHandler.load_model_and_metadata(path)
+
+    def update(self, context: PacketContext):
+        self.model_handler.predict_from_file("output.csv")
 
 if __name__ == "__main__":
-    print("In ascolto degli alert...")
-
-    for message in pubsub.listen():
-        if message['type'] == 'message':
-            data = json.loads(message['data'])
-            if data.get('alert', {}).get('signature') not in ["TCP", "HTTP"]:
-                continue
-
-            # Convert the eve.json to pcap
-            eve_name = sha1(data['timestamp'].encode()).hexdigest()
-            pcap_path = PATH_ALERTS + eve_name + ".pcap"
-            try:
-                eve2pcap.run(output_filename=pcap_path, eves=[data])
-                print(f"Scritto {pcap_path}")
-            except Exception as e:
-                print(f"Errore: {e}")
+    try:
+        redis_handler = RedisPacketHandler(
+            redis_key="suricata-packets",
+            timeout=10
+        )
 
 
-            # Convert the pcap to csv
-            csv_name = eve_name + ".csv"
-            csv_path = PATH_CSV + csv_name
+        # Convert the packets to a pcap file
+        pcap_conv = PcapConverterObserver(output_filename=TEMP_DIR + "output.pcap")
+        redis_handler.register_observer(pcap_conv)
 
-            try:
-                config_ntl = {
-                    "pcap_file_address": pcap_path,
-                    "output_file_address": csv_path,
-                    "pippo": "pluto"
-                }
-                pcap2csv.run(config_ntl)
-            except Exception as e:
-                print(f"Errore: {e}")
-            
-            
-            # Predict using the Daniele's model
-            # model = Model(model_name)
-            # print(f"Features: {model.get_features()}")
 
-            
+        # Convert the pcap file to a CSV file
+        config_ntl = {
+            "pcap_file_address": TEMP_DIR + "output.pcap",
+            "output_file_address": TEMP_DIR + "output.csv"
+        }
+        csv_conv = CsvConverterObserver(config_ntl)
+        redis_handler.register_observer(csv_conv)
+
+        # Load the model
+        model_node = ModelHandlerObserver("../models/v2/")
+        redis_handler.register_observer(model_node)
+
+
+        print("Listening for packets...")
+        redis_handler.process_packets()
+
+    except KeyboardInterrupt:
+        print("\n\nExiting...")
+
+    finally:
+        # for file in os.listdir(TEMP_DIR):
+        #     os.remove(TEMP_DIR + file)
+        # os.rmdir(TEMP_DIR)

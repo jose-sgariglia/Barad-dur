@@ -33,33 +33,40 @@ def find_pcap_files(directory):
     return pcap_files
 
 
-def run(config_dict: dict, online_capturig: bool=False, batch_mode: bool=False, continues_batch_mode: bool=False):
-    """
-    Converts a pcap file to a CSV file using the NTLFlowLyzer tool.
+class CsvConverter:
+    def __init__(self, config_dict: dict, online_capturig: bool=False, batch_mode: bool=False, continues_batch_mode: bool=False):
+        self.config_dict = config_dict
+        self.online_capturig = online_capturig
+        self.batch_mode = batch_mode
+        self.continues_batch_mode = continues_batch_mode
 
-    :param config_dict: Dictionary containing the configuration parameters.
-    :param online_capturig: If True, captures network traffic online.
-    :param batch_mode: If True, processes multiple pcap files in batch mode.
-    :param continues_batch_mode: If True, processes multiple pcap files in continuous batch mode.
-    """
-    try:
-        config = ConfigLoaderFromDict(config_dict)
-        network_flow_analyzer = NTLFlowLyzer(config, online_capturig, continues_batch_mode)
-        if not batch_mode:
-            network_flow_analyzer.run()
-            return
+    def run(self):
+        """
+        Converts a pcap file to a CSV file using the NTLFlowLyzer tool.
 
-        logging.info("Batch mode is on!")
-        batch_address = config.batch_address
-        batch_address_output = config.batch_address_output
-        pcap_files = find_pcap_files(batch_address)
-        logging.info(f"{len(pcap_files)} files detected. Let's analyze them!")
-        for file in pcap_files:
-            logging.info(100 * "#")
-            output_file_name = file.split('/')[-1]
-            config.pcap_file_address = file
-            config.output_file_address = f"{batch_address_output}/{output_file_name}.csv"
-            network_flow_analyzer = NTLFlowLyzer(config, online_capturig, continues_batch_mode)
-            network_flow_analyzer.run()
-    except Exception as e:
-        raise CSVConversionError(f"An error occurred: {str(e)}")
+        :param config_dict: Dictionary containing the configuration parameters.
+        :param online_capturig: If True, captures network traffic online.
+        :param batch_mode: If True, processes multiple pcap files in batch mode.
+        :param continues_batch_mode: If True, processes multiple pcap files in continuous batch mode.
+        """
+        try:
+            config = ConfigLoaderFromDict(self.config_dict)
+            network_flow_analyzer = NTLFlowLyzer(config, self.online_capturig, self.continues_batch_mode)
+            if not self.batch_mode:
+                network_flow_analyzer.run()
+                return
+
+            logging.info("Batch mode is on!")
+            batch_address = config.batch_address
+            batch_address_output = config.batch_address_output
+            pcap_files = find_pcap_files(batch_address)
+            logging.info(f"{len(pcap_files)} files detected. Let's analyze them!")
+            for file in pcap_files:
+                logging.info(100 * "#")
+                output_file_name = file.split('/')[-1]
+                config.pcap_file_address = file
+                config.output_file_address = f"{batch_address_output}/{output_file_name}.csv"
+                network_flow_analyzer = NTLFlowLyzer(config, self.online_capturig, self.continues_batch_mode)
+                network_flow_analyzer.run()
+        except Exception as e:
+            raise CSVConversionError(f"An error occurred: {str(e)}")

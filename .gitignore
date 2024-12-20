@@ -61,5 +61,5 @@ coverage/
 # Project Files
 
 data/
-sur_env/logs/
+suricata_env/logs/
 
