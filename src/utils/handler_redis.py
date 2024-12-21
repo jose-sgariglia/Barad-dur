@@ -1,13 +1,7 @@
 import redis
 import json
 import time
-from abc import ABC, abstractmethod
-
-class Observer(ABC):
-    @abstractmethod
-    def update(self, packets):
-        pass
-
+from utils.observer import Observer
 
 class PacketContext:
     def __init__(self, packets, metadata: dict = None):
@@ -25,17 +19,17 @@ class RedisPacketHandler:
         self.redis_key = redis_key
         self.timeout = timeout
         self.start_time = time.time()
-        self.observers = []
+        self.observers: list[Observer] = []
 
 
-    def register_observer(self, observer):
+    def register_observer(self, observer: Observer):
         """
         Registra un observer per la notifica.
         """
         self.observers.append(observer)
 
 
-    def remove_observer(self, observer):
+    def remove_observer(self, observer: Observer):
         """
         Rimuove un observer dalla lista.
         """
@@ -46,6 +40,7 @@ class RedisPacketHandler:
         """
         Notifica tutti gli observer registrati.
         """
+
         for observer in self.observers:
             observer.update(context)
 

@@ -62,4 +62,7 @@ coverage/
 
 data/
 suricata_env/logs/
+suricata_env/captures/*
+!suricata_env/captures/sample.pcap
+src/.temp/
 
