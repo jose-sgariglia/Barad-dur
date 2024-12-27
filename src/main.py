@@ -1,20 +1,24 @@
-import logging
 import argparse
+from utils.logger import logger, init_logger, logging
 from utils.handler_redis import RedisPacketHandler
 from utils.handler_temp import TEMP_DIR, setup_temp_dir, cleanup_temp_dir
 from utils.observer import PcapConverterObserver, CsvConverterObserver, ModelHandlerObserver
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Set up logging and temp directory
+init_logger(logging.INFO)
 setup_temp_dir()
 
 
 def main(redis_key, timeout, model_path):
     try:
+        logger.info("Starting packet processing pipeline...")
+
         redis_handler = RedisPacketHandler(
             redis_key=redis_key,
             timeout=timeout
         )
+        logger.info("Redis handler initialized.")
 
         pcap_conv = PcapConverterObserver(output_filename=TEMP_DIR + "output.pcap")
         csv_conv = CsvConverterObserver({
@@ -23,21 +27,26 @@ def main(redis_key, timeout, model_path):
             })
         model_node = ModelHandlerObserver(model_path)
 
-
         redis_handler.register_observer(pcap_conv)
         redis_handler.register_observer(csv_conv)
         redis_handler.register_observer(model_node)
 
-        logging.info("Listening for packets...")
+        logger.info("Observers registered.")
+
+        logger.info("Starting packet processing.")
+        logger.info("Processing packets...")
         redis_handler.process_packets()
 
     except KeyboardInterrupt:
-        logging.info("\n\nExiting...")
+        logger.info("\n\nExiting...")
 
     finally:
         cleanup_temp_dir()
 
 if __name__ == "__main__":
+    logger.info("Starting Barad-dur packet processing pipeline.")
+
+
     parser = argparse.ArgumentParser(description="Run the IDS-AI packet processing pipeline.")
     parser.add_argument("--redis-key", type=str, default="suricata-packets", help="Redis key for packet data.")
     parser.add_argument("--timeout", type=int, default=10, help="Timeout for processing packets.")

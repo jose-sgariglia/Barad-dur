@@ -197,6 +197,10 @@ def payload2packet(event):
 #
 # By Suga
 # -------------------------------------------------------------------------------------------------
+import logging
+
+
+barad_logger = logging.getLogger("barad_logger")
 
 class PcapConversionError(Exception):
     pass
@@ -255,6 +259,8 @@ class PcapConverter:
         :return: Numero di eventi convertiti.
         """
         count = 0
+
+        barad_logger.info(f"[E2P] Converting {len(eves)} eve records to pcap...")
         try:
             for event in eves:
                 hdr, packet = None, None
@@ -267,9 +273,9 @@ class PcapConverter:
                     self.dumper.dump(hdr, ctypes.c_char_p(packet))
                     count += 1
         except Exception as e:
-            raise PcapConversionError(f"Error during conversion: {str(e)}")
+            raise PcapConversionError(f"[E2P] Error during conversion: {str(e)}")
         finally:
             self.dumper.close()
 
-        print(f"{count} eve records converted to pcap.", file=sys.stderr)
+        barad_logger.info(f"[E2P] {count} eve records converted to pcap.")
         return count

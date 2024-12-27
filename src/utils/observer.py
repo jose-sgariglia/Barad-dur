@@ -3,6 +3,8 @@ from utils.eve2pcap import PcapConverter
 from utils.pcap2csv import CsvConverter
 from utils.handler_model import ModelHandler
 from utils.handler_redis import PacketContext
+from utils.handler_temp import TEMP_DIR
+
 
 class Observer(ABC):
     @abstractmethod
@@ -24,8 +26,8 @@ class CsvConverterObserver(Observer):
         self.csv_converter.run()
 
 class ModelHandlerObserver(Observer):
-    def __init__(self, path: str):
-        self.model_handler = ModelHandler.load_model_and_metadata(path)
+    def __init__(self, model_path: str):
+        self.model_handler = ModelHandler.load_model_and_metadata(model_path)
 
     def update(self, context: PacketContext):
         self.model_handler.predict_from_file(TEMP_DIR + "output.csv")
