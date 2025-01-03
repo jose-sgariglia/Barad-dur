@@ -3,16 +3,13 @@ import json
 import time
 
 from utils.logger import logging
+from utils.packet_handler import PacketContext
+from utils.packet_handler import PacketHandler  # Import the common interface
 
 barad_logger = logging.getLogger("barad_logger")
 
-class PacketContext:
-    def __init__(self, packets, metadata: dict = None):
-        self.packets = packets
-        self.metadata = metadata if metadata is not None else {}
 
-
-class RedisPacketHandler:
+class RedisPacketHandler(PacketHandler):
     """
     Redis packet handler that implements the Observer pattern to notify changes.
     """
