@@ -1,9 +1,10 @@
 import argparse
+from utils.validators import ValidateModelPath, ValidateFilePath
 from utils.logger import logger, init_logger, logging
-from utils.handler_redis import RedisPacketHandler
-from utils.handler_temp import TEMP_DIR, setup_temp_dir, cleanup_temp_dir
+from utils.handlers.handler_redis import RedisPacketHandler
+from utils.handlers.handler_temp import TEMP_DIR, setup_temp_dir, cleanup_temp_dir
 from utils.observer import PcapConverterObserver, CsvConverterObserver, ModelHandlerObserver
-from utils.handler_file import FilePacketHandler  # Import the new handler
+from utils.handlers.handler_file import FilePacketHandler  # Import the new handler
 
 
 # Set up logging and temp directory
@@ -11,7 +12,37 @@ init_logger(logging.INFO)
 setup_temp_dir()
 
 
-def main(redis_key, timeout, model_path, input_type):
+def display_banner(model: str, redis_key: str, timeout: int, file_path: str):
+    banner = """
+      ____                      _                _            
+     |  _ \\                    | |              | |           
+     | |_) | __ _ _ __ __ _  __| |  ______    __| |_   _ _ __ 
+     |  _ < / _` | '__/ _` |/ _` | |______|  / _` | | | | '__|
+     | |_) | (_| | | | (_| | (_| |          | (_| | |_| | |   
+     |____/ \\__,_|_|  \\__,_|\\__,_|           \\__,_|\\__,_|_|   
+
+
+Barad-dur is a packet processing pipeline that uses a deep learning model to detect malicious packets.
+    Developed by: Suga   
+
+Information:                                      
+    """
+
+    if file_path is not None:
+        print(banner)
+        print(f"\tModel: {model}")
+        print(f"\tReading packets from file: {file_path}")
+
+    else:
+        print(banner)
+        print(f"\tModel: {model}")
+        print(f"\tReading packets from Redis key: {redis_key}")
+        print(f"\tTimeout: {timeout} seconds")
+
+    print("\n-----------------------------------------------------------\n")
+
+
+def main(redis_key, timeout, model_path, file_path):
     try:
         logger.info("Starting packet processing pipeline...")
 
@@ -23,7 +54,7 @@ def main(redis_key, timeout, model_path, input_type):
             })
         model_node = ModelHandlerObserver(model_path)
 
-        if input_type == "redis":
+        if file_path is None:
             packet_handler = RedisPacketHandler(
                 redis_key=redis_key,
                 timeout=timeout
@@ -34,18 +65,13 @@ def main(redis_key, timeout, model_path, input_type):
             packet_handler.register_observer(model_node)
 
 
-        elif input_type == "file":
+        else:
             packet_handler = FilePacketHandler(
-                file_path=redis_key  # Using redis_key argument to pass file path for simplicity
+                file_path=file_path 
             )
             logger.info("File handler initialized.")
             packet_handler.register_observer(csv_conv)
             packet_handler.register_observer(model_node)
-
-
-        else:
-            logger.error("Invalid input type specified. Use 'redis' or 'file'.")
-            return
             
 
         logger.info("Observers registered.")
@@ -63,13 +89,38 @@ def main(redis_key, timeout, model_path, input_type):
 
 
 if __name__ == "__main__":
-    logger.info("Starting Barad-dur packet processing pipeline.")
-
     parser = argparse.ArgumentParser(description="Run the IDS-AI packet processing pipeline.")
-    parser.add_argument("--redis-key", type=str, default="suricata-packets", help="Redis key for packet data or file path.")
-    parser.add_argument("--timeout", type=int, default=10, help="Timeout for processing packets.")
-    parser.add_argument("--model-path", type=str, required=True, help="Path to the model directory.")
-    parser.add_argument("--input-type", type=str, choices=["redis", "file"], required=True, help="Type of input source (redis or file).")
+
+    parser.add_argument(
+        "--model-path", "-m", 
+        type=str, 
+        required=True, 
+        help="Path to the model directory.", 
+        action=ValidateModelPath
+    )
+
+    parser.add_argument(
+        "--read-file", "-r", 
+        type=str,
+        metavar="FILE_PATH",
+        help="Path to the file to read packets from. If not provided, packets are read from the stream.",
+        action=ValidateFilePath
+    )
+
+    parser.add_argument(
+        "--redis-key", 
+        type=str, 
+        default="suricata-packets", 
+        help="Redis key for packet data if reading from stream."
+    )
+
+    parser.add_argument(
+        "--timeout", 
+        type=int, 
+        default=10, 
+        help="Timeout for processing packets if reading from stream."
+    )
 
     args = parser.parse_args()
-    main(args.redis_key, args.timeout, args.model_path, args.input_type)
+    display_banner(args.model_path, args.redis_key, args.timeout, args.read_file)
+    main(args.redis_key, args.timeout, args.model_path, args.read_file)

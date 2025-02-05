@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from utils.eve2pcap import PcapConverter
 from utils.pcap2csv import CsvConverter
-from utils.handler_model import ModelHandler
-from utils.packet_handler import PacketContext
-from utils.handler_temp import TEMP_DIR
+from utils.model import ModelHandler
+from utils.handlers.packet_handler import PacketContext
+from utils.handlers.handler_temp import TEMP_DIR
 
 
 class Observer(ABC):

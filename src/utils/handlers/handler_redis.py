@@ -3,8 +3,8 @@ import json
 import time
 
 from utils.logger import logging
-from utils.packet_handler import PacketContext
-from utils.packet_handler import PacketHandler  # Import the common interface
+from utils.handlers.packet_handler import PacketContext
+from utils.handlers.packet_handler import PacketHandler  # Import the common interface
 
 barad_logger = logging.getLogger("barad_logger")
 
