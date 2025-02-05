@@ -1,11 +1,9 @@
 import os
 import json
-from utils.packet_handler import PacketHandler, PacketContext
+from utils.handlers.packet_handler import PacketHandler, PacketContext
 from utils.logger import logging
 
 file_logger = logging.getLogger("barad_logger")
-
-CAPTURE_DIR = "../suricata_env/captures/"
 
 class FilePacketHandler(PacketHandler):
     """
@@ -13,7 +11,7 @@ class FilePacketHandler(PacketHandler):
     """
 
     def __init__(self, file_path):
-        self.file_path = os.path.join(CAPTURE_DIR, file_path)
+        self.file_path = file_path
         self.observers = []
         file_logger.debug("[HFS] FilePacketHandler initialized with file path: %s", file_path)
 
