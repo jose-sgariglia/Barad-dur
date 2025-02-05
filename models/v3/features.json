@@ -1,0 +1,9 @@
+[
+    "packets_IAT_mean",
+    "bwd_packets_IAT_std",
+    "bwd_packets_IAT_variance",
+    "median_bwd_packets_delta_len",
+    "max_payload_bytes_delta_len",
+    "activity_Benign-Systemic",
+    "activity_Benign-Web_Browsing_HTTP-S"
+]
