@@ -29,7 +29,7 @@ class RedisPacketHandler(PacketHandler):
         Registers an observer for notification.
         """
         self.observers.append(observer)
-        barad_logger.info("[HRS] Observer registered: %s", observer)
+        barad_logger.debug("[HRS] Observer registered: %s", observer)
 
 
     def remove_observer(self, observer):
@@ -37,7 +37,7 @@ class RedisPacketHandler(PacketHandler):
         Removes an observer from the list.
         """
         self.observers.remove(observer)
-        barad_logger.info("[HRS] Observer removed: %s", observer)
+        barad_logger.debug("[HRS] Observer removed: %s", observer)
 
 
     def notify_observer(self, context):
@@ -82,9 +82,12 @@ class RedisPacketHandler(PacketHandler):
         while True:
             elapsed_time = time.time() - self.start_time
             if elapsed_time >= self.timeout:
+                timer = time.time()
+
                 list_length = self.__check_redis_length()
                 if list_length > 0:
-                    barad_logger.warning("[HRS] \x1b[34mTimeout reached.\x1b[0m Found %d packets to process.", list_length)
+                    print("\x1b[34mTimeout reached.\x1b[0m Found %d packets to process.", list_length)
+                    barad_logger.info("[HRS] Found %d packets to process", list_length)
                     try:
                         packets = self.__fetch_packets()
                         packet_context = PacketContext(packets)
@@ -93,6 +96,11 @@ class RedisPacketHandler(PacketHandler):
                         barad_logger.error("[HRS] Error processing packets: %s", str(e))
                         break
                 else:
+                    print("No packets found. Waiting...")
                     barad_logger.info("[HRS] No packets found. Waiting...")
+
+                timer = time.time() - timer
+                barad_logger.debug("[HRS] Processed packets in %.2f seconds", timer)
+
                 self.start_time = time.time()
             time.sleep(1)

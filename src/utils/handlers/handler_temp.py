@@ -9,3 +9,6 @@ def cleanup_temp_dir():
     for file in os.listdir(TEMP_DIR):
         os.remove(TEMP_DIR + file)
     os.rmdir(TEMP_DIR)
+
+
+setup_temp_dir()

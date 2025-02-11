@@ -7,11 +7,6 @@ from utils.observer import PcapConverterObserver, CsvConverterObserver, ModelHan
 from utils.handlers.handler_file import FilePacketHandler  # Import the new handler
 
 
-# Set up logging and temp directory
-init_logger(logging.INFO)
-setup_temp_dir()
-
-
 def display_banner(model: str, redis_key: str, timeout: int, file_path: str):
     banner = """
       ____                      _                _            
@@ -44,7 +39,7 @@ Information:
 
 def main(redis_key, timeout, model_path, file_path):
     try:
-        logger.info("Starting packet processing pipeline...")
+        logger.debug("Starting packet processing pipeline...")
 
 
         pcap_conv = PcapConverterObserver(output_filename=TEMP_DIR + "output.pcap")
@@ -59,7 +54,7 @@ def main(redis_key, timeout, model_path, file_path):
                 redis_key=redis_key,
                 timeout=timeout
             )
-            logger.info("Redis handler initialized.")
+            logger.debug("Redis handler initialized.")
             packet_handler.register_observer(pcap_conv)
             packet_handler.register_observer(csv_conv)
             packet_handler.register_observer(model_node)
@@ -69,15 +64,15 @@ def main(redis_key, timeout, model_path, file_path):
             packet_handler = FilePacketHandler(
                 file_path=file_path 
             )
-            logger.info("File handler initialized.")
+            logger.debug("File handler initialized.")
             packet_handler.register_observer(csv_conv)
             packet_handler.register_observer(model_node)
             
 
-        logger.info("Observers registered.")
+        logger.debug("Observers registered.")
 
-        logger.info("Starting packet processing.")
-        logger.info("Processing packets...")
+        logger.debug("Starting packet processing.")
+        logger.debug("Processing packets...")
         packet_handler.process_packets()
 
     except KeyboardInterrupt:
@@ -100,7 +95,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--read-file", "-r", 
+        "--read-file", "-f", 
         type=str,
         metavar="FILE_PATH",
         help="Path to the file to read packets from. If not provided, packets are read from the stream.",
@@ -108,7 +103,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--redis-key", 
+        "--redis-key", "-k",
         type=str, 
         default="suricata-packets", 
         help="Redis key for packet data if reading from stream."
@@ -121,6 +116,22 @@ if __name__ == "__main__":
         help="Timeout for processing packets if reading from stream."
     )
 
+    parser.add_argument(
+        "--verbose", "-v", 
+        action="store_true", 
+        help="Enable verbose logging."
+    )
+
+    parser.add_argument(
+        "--verbose-debug", "-vv", 
+        action="store_true", 
+        help="Enable debug logging."
+    )
+
     args = parser.parse_args()
+
+    if args.verbose or args.verbose_debug:
+       init_logger(logging.DEBUG if args.verbose_debug else logging.INFO)
+                
     display_banner(args.model_path, args.redis_key, args.timeout, args.read_file)
     main(args.redis_key, args.timeout, args.model_path, args.read_file)

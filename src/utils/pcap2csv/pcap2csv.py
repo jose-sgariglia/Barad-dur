@@ -1,5 +1,8 @@
+import sys
+import io
 import logging
 import glob
+from contextlib import redirect_stdout
 from .config_loader import ConfigLoaderFromDict
 from NTLFlowLyzer.network_flow_analyzer import NTLFlowLyzer
 
@@ -25,15 +28,19 @@ class CsvConverter:
         try:
             config = ConfigLoaderFromDict(self.config_dict)
             network_flow_analyzer = NTLFlowLyzer(config, self.online_capturig, self.continues_batch_mode)
+
             if not self.batch_mode:
-                network_flow_analyzer.run()
+                with io.StringIO() as f, redirect_stdout(f):  # Sopprime tutte le stampe
+                    network_flow_analyzer.run()
                 return
 
             barad_logger.info("[P2C] Batch mode is on!")
             batch_address = config.batch_address
             batch_address_output = config.batch_address_output
             pcap_files = find_pcap_files(batch_address)
-            barad_logger.info(f"[P2C] {len(pcap_files)} files detected. Let's analyze them!")
+            barad_logger.info(f"[P2C] {len(pcap_files)} files detected.")
+
+            print(f"{len(pcap_files)} files detected. Let's analyze them!")
             for file in pcap_files:
                 barad_logger.info(100 * "#")
                 output_file_name = file.split('/')[-1]
@@ -43,6 +50,11 @@ class CsvConverter:
 
                 barad_logger.info(f"[P2C] Converting {file} to {config.output_file_address}")
                 barad_logger.info("[P2C] Nexts are the logs from NTLFlowLyzer:")
-                network_flow_analyzer.run()
+                print("NTLFlowLyzer is running...")
+
+                with io.StringIO() as f, redirect_stdout(f):  # Sopprime le stampe durante la conversione
+                    network_flow_analyzer.run()
+
+                print("NTLFlowLyzer is done.")
         except Exception as e:
             raise CSVConversionError(f"[P2C] An error occurred: {str(e)}")
