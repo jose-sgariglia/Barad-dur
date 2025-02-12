@@ -4,7 +4,8 @@ import time
 
 from utils.logger import logging
 from utils.handlers.packet_handler import PacketContext
-from utils.handlers.packet_handler import PacketHandler  # Import the common interface
+from utils.handlers.packet_handler import PacketHandler 
+from utils.monitoring import monitor_resources
 
 barad_logger = logging.getLogger("barad_logger")
 
@@ -86,7 +87,7 @@ class RedisPacketHandler(PacketHandler):
 
                 list_length = self.__check_redis_length()
                 if list_length > 0:
-                    print("\x1b[34mTimeout reached.\x1b[0m Found %d packets to process.", list_length)
+                    print(f"\x1b[34mTimeout reached.\x1b[0m Found {list_length} packets to process.")
                     barad_logger.info("[HRS] Found %d packets to process", list_length)
                     try:
                         packets = self.__fetch_packets()
@@ -100,7 +101,12 @@ class RedisPacketHandler(PacketHandler):
                     barad_logger.info("[HRS] No packets found. Waiting...")
 
                 timer = time.time() - timer
-                barad_logger.debug("[HRS] Processed packets in %.2f seconds", timer)
+                cpu_usage, ram_usage = monitor_resources()
+
+                if timer > 0:
+                    barad_logger.debug("[HRS] Process latency: %.2f seconds", timer)
+                    barad_logger.debug("[HRS] Process throughput: %.2f packets/second", list_length / timer)
+                    barad_logger.debug("[HRS] CPU usage: %.2f%% | RAM usage: %.2f%%", cpu_usage, ram_usage)
 
                 self.start_time = time.time()
             time.sleep(1)

@@ -1,11 +1,13 @@
 import os
 import json
+import time
 import logging
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
+from utils.monitoring import monitor_resources
 
 barad_logger = logging.getLogger("barad_logger")
 
@@ -88,7 +90,7 @@ class ModelHandler:
         features_data = data[self.selected_features].to_numpy()
 
         barad_logger.info("[MDL] Starting prediction")
-
+        time_start = time.time()
         predictions = self.model.predict(features_data)
 
         for i, value_pred in enumerate(predictions):
@@ -100,6 +102,14 @@ class ModelHandler:
                 barad_logger.warning(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
 
         barad_logger.info("[MDL] Prediction complete.")
+
+        time_end = time.time()
+        cpu_usage, memory_usage = monitor_resources()
+
+
+        barad_logger.debug(f"[MDL] Prediction latency: {time_end - time_start:.3f} seconds.")
+        barad_logger.debug(f"[MDL] Prediction throughput: {len(predictions) / (time_end - time_start):.3f} packets/second.")
+        barad_logger.debug(f"[MDL] CPU usage: {cpu_usage:.2f}% | RAM usage: {memory_usage:.2f}%.")
 
 
     def predict_from_file(self, file):
