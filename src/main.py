@@ -73,10 +73,10 @@ def main(redis_key, timeout, model_path, file_path):
 
         logger.debug("Starting packet processing.")
         logger.debug("Processing packets...")
-        packet_handler.process_packets()
+        packet_handler.run()
 
     except KeyboardInterrupt:
-        logger.info("\n\nExiting...")
+        logger.info("Exiting...")
 
     finally:
         cleanup_temp_dir()

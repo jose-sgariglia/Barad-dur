@@ -1,18 +1,21 @@
 import os
 import json
-import time
 import logging
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
-from utils.monitoring import monitor_resources
+from utils.monitoring import monitor_context
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
 barad_logger = logging.getLogger("barad_logger")
 
 
 class ModelHandler:
+    """
+    Model handler class that loads a pre-trained model and metadata to make predictions.
+    """
+
     def __init__(self, model, selected_features: list, mapping: list):
         self.model = model
         self.selected_features = selected_features
@@ -21,6 +24,9 @@ class ModelHandler:
 
     @staticmethod
     def load_model_and_metadata(model_path: str):
+        """
+        Load the pre-trained model and metadata from the specified path.
+        """
         model = tf.keras.models.load_model(os.path.join(model_path, "model.keras"))
 
         with open(os.path.join(model_path, "features.json"), "r") as f:
@@ -33,10 +39,17 @@ class ModelHandler:
 
 
     def _read_csv(self, file):
+        """
+        Read the CSV file and return a Pandas DataFrame.
+        """
+
         return pd.read_csv(file)
 
 
     def _clean_data(self, data: pd.DataFrame):
+        """
+        Clean the data by removing duplicates and replacing infinite values.
+        """
         barad_logger.info("[MDL] Cleaning data...")
 
         data.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -50,6 +63,10 @@ class ModelHandler:
     
 
     def __one_hot_encode(self, data: pd.DataFrame):
+        """
+        Perform one-hot encoding on the categorical columns in the data.
+        """
+
         barad_logger.info("[MDL] One-hot encoding data...")
 
         object_cols = data.select_dtypes(include=['object']).columns
@@ -66,6 +83,9 @@ class ModelHandler:
     
 
     def __normalize_data(self, data: pd.DataFrame):
+        """
+        Normalize the data using MinMaxScaler.
+        """
         barad_logger.info("[MDL] Normalizing data...")
 
         scaler = MinMaxScaler()
@@ -76,43 +96,50 @@ class ModelHandler:
         return data
 
 
-    def predict(self, data: pd.DataFrame):
+    def __check_data(self, data: pd.DataFrame):
+        """
+        Check if the data are in the correct format and contain the selected features.
+        """
         if not hasattr(self, "selected_features") or not self.selected_features:
             raise ValueError("selected_features not defined or empty.")
-
+        
         if not isinstance(data, pd.DataFrame):
             raise ValueError("Input must be a Pandas DataFrame.")
-
+        
         missing_features = [feat for feat in self.selected_features if feat not in data.columns]
         if missing_features:
             raise ValueError(f"The following features are missing in the DataFrame: {missing_features}")
 
+
+
+    def predict(self, data: pd.DataFrame):
+        """
+        Make predictions on the input
+        """
+
+        self.__check_data(data)
         features_data = data[self.selected_features].to_numpy()
 
         barad_logger.info("[MDL] Starting prediction")
-        time_start = time.time()
-        predictions = self.model.predict(features_data)
+        print("Starting prediction...")
 
-        for i, value_pred in enumerate(predictions):
-            if value_pred >= len(self.mapping) or value_pred < 0:
-                raise ValueError(f"The predicted value {value_pred} is out of range for the mapping list.")
+        with monitor_context("MDL") as monitor:
+            predictions = self.model.predict(features_data)
 
-            output_pred = self.mapping[int(value_pred)]
-            if output_pred != "Benign":
-                barad_logger.warning(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
+            for i, value_pred in enumerate(predictions):
+                if value_pred >= len(self.mapping) or value_pred < 0:
+                    raise ValueError(f"The predicted value {value_pred} is out of range for the mapping list.")
 
-        barad_logger.info("[MDL] Prediction complete.")
+                output_pred = self.mapping[int(value_pred)]
+                if output_pred != "Benign":
+                    print(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
+                    barad_logger.warning(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
 
-        time_end = time.time()
-        cpu_usage, memory_usage = monitor_resources()
-
-
-        barad_logger.debug(f"[MDL] Prediction latency: {time_end - time_start:.3f} seconds.")
-        barad_logger.debug(f"[MDL] Prediction throughput: {len(predictions) / (time_end - time_start):.3f} packets/second.")
-        barad_logger.debug(f"[MDL] CPU usage: {cpu_usage:.2f}% | RAM usage: {memory_usage:.2f}%.")
+            barad_logger.info("[MDL] Prediction complete.")
+            print("Prediction complete.")
 
 
-    def predict_from_file(self, file):
+    def run(self, file):
         barad_logger.info("[MDL] Pre-processing from packet data...")
         data = self._read_csv(file)
         data = self._clean_data(data)

@@ -33,4 +33,4 @@ class ModelHandlerObserver(Observer):
         self.model_handler = ModelHandler.load_model_and_metadata(model_path)
 
     def update(self, context: PacketContext = None):
-        self.model_handler.predict_from_file(TEMP_DIR + "output.csv")
+        self.model_handler.run(TEMP_DIR + "output.csv")
