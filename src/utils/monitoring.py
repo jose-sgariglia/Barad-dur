@@ -64,6 +64,10 @@ def monitor_decorator(name_monitoring:str="", interval:float=None):
 
 @contextmanager
 def monitor_context(name_monitoring="", interval=None):
+    """
+    Context manager to monitor the CPU and RAM usage of a block of code.
+    """
+
     name_monitoring_str = f" - {name_monitoring}" if isinstance(name_monitoring, str) else ""
 
     monitor = Monitoring()
