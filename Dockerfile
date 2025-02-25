@@ -1,44 +1,24 @@
-FROM ubuntu:24.04
+# Barad-Dur VM
+# Description: 
+#       Dockerfile for run the code in a container so to isolate the environment
+#       and avoid any dependency issues.
+#       This Dockerfile runs ONLY the code in `\src` directory. 
+#       Suricata and Redis are not included in the container, they should be installed on the host machine.
+#       To run correctly, use this command
+#       `docker run -it --network="host" -v barad-dur` for running the container
+#       `docker build -t barad-dur .` for building the container
 
-ENV DEBIAN_FRONTEND=noninteractive
+FROM python:3.12-slim
 
-COPY . /opt/barad-dur
-WORKDIR /opt/barad-dur
+RUN apt-get update && \
+    apt-get install -y libpcap0.8-dev
 
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
-    git \
-    redis-server \
-    openssh-server
-
-# Suricata Installation
-RUN apt-get install software-properties-common -y 
-RUN add-apt-repository ppa:oisf/suricata-stable
-RUN apt-get update && apt-get install suricata -y
-
-# SSH Configuration
-RUN mkdir /var/run/sshd && \
-    echo 'root:password' | chpasswd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config
+WORKDIR /app
+COPY . /app
 
 # Install Python Dependencies
-RUN python3 -m venv /opt/venv
-RUN /opt/venv/bin/pip3 install --upgrade pip
-RUN /opt/venv/bin/pip3 install -r /opt/barad-dur/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+RUN sh setup.sh
 
-# Install NTLFlowLyzer
-RUN /opt/venv/bin/pip3 install -r /opt/barad-dur/libs/NTLFlowLyzer/requirements.txt
-RUN cd /opt/barad-dur/libs/NTLFlowLyzer && /opt/venv/bin/python3 setup.py install && cd /opt/barad-dur
-
-# Entrypoint Configuration
-COPY entrypoint.sh /opt/barad-dur/entrypoint.sh
-RUN chmod +x /opt/barad-dur/entrypoint.sh
-
-EXPOSE 22
-
-ENTRYPOINT ["/opt/barad-dur/entrypoint.sh"]
-
-
+ENTRYPOINT ["bash"]
