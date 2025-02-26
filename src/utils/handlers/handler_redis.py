@@ -5,7 +5,6 @@ import time
 from utils.logger import logging
 from utils.handlers.packet_handler import PacketContext
 from utils.handlers.packet_handler import PacketHandler 
-from utils.monitoring import monitor_decorator
 
 barad_logger = logging.getLogger("barad_logger")
 
@@ -75,7 +74,6 @@ class RedisPacketHandler(PacketHandler):
         return packets
     
 
-    @monitor_decorator("HRS")
     def __process_packets(self):
         """
         Processes the packets in the Redis list.

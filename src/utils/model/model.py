@@ -123,20 +123,19 @@ class ModelHandler:
         barad_logger.info("[MDL] Starting prediction")
         print("Starting prediction...")
 
-        with monitor_context("MDL") as monitor:
-            predictions = self.model.predict(features_data)
+        predictions = self.model.predict(features_data)
 
-            for i, value_pred in enumerate(predictions):
-                if value_pred >= len(self.mapping) or value_pred < 0:
-                    raise ValueError(f"The predicted value {value_pred} is out of range for the mapping list.")
+        for i, value_pred in enumerate(predictions):
+            if value_pred >= len(self.mapping) or value_pred < 0:
+                raise ValueError(f"The predicted value {value_pred} is out of range for the mapping list.")
 
-                output_pred = self.mapping[int(value_pred)]
-                if output_pred != "Benign":
-                    print(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
-                    barad_logger.warning(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
+            output_pred = self.mapping[int(value_pred)]
+            if output_pred != "Benign":
+                print(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
+                barad_logger.warning(f"\x1b[31m\x1b[1m[MDL] Alert: Potential attack detected in record {i + 1}\x1b[0m")
 
-            barad_logger.info("[MDL] Prediction complete.")
-            print("Prediction complete.")
+        barad_logger.info("[MDL] Prediction complete.")
+        print("Prediction complete.")
 
 
     def run(self, file):

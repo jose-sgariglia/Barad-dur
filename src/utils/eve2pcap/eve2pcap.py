@@ -199,6 +199,7 @@ def payload2packet(event):
 # -------------------------------------------------------------------------------------------------
 import logging
 
+from utils.monitoring import monitor_decorator
 
 barad_logger = logging.getLogger("barad_logger")
 
@@ -251,6 +252,7 @@ class PcapConverter:
         else:
             return DLT_EN10MB
 
+    @monitor_decorator(code_area="E2P")
     def run(self, eves: List[dict]) -> int:
         """
         Converte gli eventi eve.json in un file pcap.

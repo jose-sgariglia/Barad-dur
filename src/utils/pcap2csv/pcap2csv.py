@@ -1,10 +1,11 @@
-import sys
 import io
-import logging
 import glob
+import logging
 from contextlib import redirect_stdout
-from .config_loader import ConfigLoaderFromDict
 from NTLFlowLyzer.network_flow_analyzer import NTLFlowLyzer
+
+from utils.monitoring import monitor_decorator
+from .config_loader import ConfigLoaderFromDict
 
 # Configure the logger
 barad_logger = logging.getLogger("barad_logger")
@@ -24,6 +25,7 @@ class CsvConverter:
         self.batch_mode = batch_mode
         self.continues_batch_mode = continues_batch_mode
 
+    @monitor_decorator(code_area="P2C")
     def run(self):
         try:
             config = ConfigLoaderFromDict(self.config_dict)
