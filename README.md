@@ -1,5 +1,5 @@
 <div align="center" style="margin-bottom: 20px">
-  <img width="90%" src="assets/logo.png">
+  <img width="360px" height="360px" src="assets/logo.png">
 </div>
 
 ![Version](https://img.shields.io/badge/unisa-orange)
