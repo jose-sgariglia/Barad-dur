@@ -1,4 +1,6 @@
-<img width="100%" src="assets/logo.png">
+<div align="center" style="margin-bottom: 20px">
+  <img width="90%" src="assets/logo.png">
+</div>
 
 ![Version](https://img.shields.io/badge/unisa-orange)
 ![Keywords](https://img.shields.io/badge/keywords-IDS%2C%20ML%2C%20Cybersecurity%2C%20AI-white)
